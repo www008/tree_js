@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TreeBank</title>
+    <script src="js/two.js"></script>
+    <script src="js/jquery-3.6.0.js"></script>
+    <script src="js/tree.js"></script>
+</head>
+<body>
+    <script>
+var FONT_STYLE = {
+    family:'"Arial","Microsoft YaHei","黑体","宋体",sans-serif',
+    baseline: 'bottom',
+    alignment:'left',
+    size: 13,           //font size
+    leading: 13         //line height
+}
+var TREE_LAYER_HEIGHT = 40  // the height of tree layer by layer
+var TREE_LEAF_GAP = 15      // the gap between a leaf to another
+
+var painter = new Painter({width:300, height:300})
+//var point = {x:60, y:30}
+//painter.drawHorizontalLine(point, 200)
+//drawVerticalLine(point1, 100)
+
+//var t0rect = computeTextBox('中xx/N(sse)', 0, FONT_STYLE.size)
+//alert(t0rect)
+var t1rect = painter.drawText('中/N(sse)', 0, FONT_STYLE.size)
+t1m = getTextMiddlePoint(t1rect)
+painter.drawPoint(t1m.x, t1m.y)
+painter.drawPoint(t1rect.right, t1rect.bottom)
+
+var t2rect = painter.drawText('键中', 150, 100)
+painter.drawPoint(t2rect.left, t2rect.top)
+painter.drawBox(t2rect.left, t2rect.top, t2rect.width, t2rect.height)
+painter.drawPoint(t2rect.right, t2rect.bottom)
+
+var t3rect = painter.drawText('NPA!', 150, 120)
+painter.drawPoint(t3rect.left, t3rect.top)
+painter.drawBox(t3rect.left, t3rect.top, t3rect.width, t3rect.height)
+painter.drawPoint(t3rect.right, t3rect.bottom)
+
+var point1 = getTextMiddel(t1rect, false)
+var point2 = getTextMiddel(t2rect, true)
+painter.drawLine(point1.x, point1.y, point2.x, point2.y)
+</script>
+</body>
+</html>
