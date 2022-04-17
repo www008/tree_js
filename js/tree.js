@@ -82,8 +82,27 @@ function Painter(elem, params) {
      * 
      **/
     this.drawText = drawText
-    function drawText(message, x, y){
-        return this.two.makeText(message, x, y+FONT_STYLE.size, FONT_STYLE)
+    function drawText(message, x, y, color){
+        var text = this.two.makeText(message, 2, FONT_STYLE.size, FONT_STYLE);
+        var rect = getTextBoundingBox(text);
+        var group = null;
+        if (color) {
+            var bg = this.two.makeRoundedRectangle(rect.left+rect.width/2, rect.top+rect.height/2, rect.width, rect.height, 4);
+            bg.fill = color;
+            bg.opacity = 0.50;
+            bg.noStroke();
+            group = this.two.makeGroup(bg, text)
+        }else{
+            group = this.two.makeGroup(text)
+        }
+        group.position.set(x, y);
+        group.noStroke();
+        var text_box = { 
+            left:rect.left+x, top:rect.top+y, 
+            width:rect.width, height:rect.height,
+            right:x+rect.left+rect.width, bottom:y+rect.top+rect.height,
+        }
+        return {obj: group, box:text_box}
     }
 
     this.drawLine = drawLine
@@ -179,12 +198,12 @@ function getTextBoundingBox(txt) {
     var rect = txt.getBoundingClientRect()
     var wlen = getWideCharLen(txt._value)
     wlen = (wlen>0)?(wlen-1):0
-    rect.left = floorX(rect.left)
+    rect.left = floorX(rect.left-2) //留边2
     rect.top = floorX(rect.top)
-    rect.width = floorX(rect.width) + wlen * FONT_STYLE.size * 0.6 // two.js 汉字宽计算不正确
-    rect.height = floorX(rect.height)
+    rect.width = floorX(rect.width) + wlen * FONT_STYLE.size * 0.6 + 4 // two.js 汉字宽计算不正确
+    rect.height = floorX(rect.height) + 4
     rect.right = floorX(rect.left + rect.width)
-    rect.bottom = floorX(rect.bottom)
+    rect.bottom = floorX(rect.top + rect.height)
     return rect
 }
 
@@ -199,8 +218,8 @@ function computeTextBox(message, x, y) {
 //------  树相关  --------
 //获取树的叶节点
 function parseTree(tree, depth=0) {
-    if (typeof(tree)=='string'){
-        return [ {word:tree, depth:depth} ]
+    if (typeof(tree) == 'object' && !tree.hasOwnProperty('children')){
+        return [ {word:tree.label, depth:depth} ]
     }
 
     var leafs = []
@@ -235,10 +254,9 @@ function getTreeDepth(tree, depth=0) {
 function drawTokens(painter, leafs, x, y) {
     var width = 0
     for (var i = 0; i < leafs.length; i++) {
-        var obj_token = painter.drawText(leafs[i].word, x+width, y)
-        var token_rect = getTextBoundingBox(obj_token)
-        painter.drawBox(token_rect.left, token_rect.top, token_rect.width, token_rect.height);
-        width += token_rect.width + TREE_LEAF_GAP
+        var token = painter.drawText(leafs[i].word, x+width, y)
+        painter.drawBox(token.box.left, token.box.top, token.box.width, token.box.height);
+        width += token.box.width + TREE_LEAF_GAP
     }
     return 
 }
@@ -298,10 +316,16 @@ function collectLeaf(node, leafs) {
 // 关联点击事件
 function attachClickEvent(node, tree, painter) {
     if (node.obj_children.length==0){
-        return;
+        return false;
     }
+    var isUp = false;
     for (var i=0; i<node.obj_children.length; i++){
-        attachClickEvent(node.obj_children[i], tree, painter);
+        if (attachClickEvent(node.obj_children[i], tree, painter)) {
+            isUp = true;
+        }
+    }
+    if (!isUp) {  //单层，不关联
+        return true;
     }
     node.obj.renderer.elem.style.cursor = 'pointer';
     node.obj.renderer.elem.addEventListener('click', function() {
@@ -317,6 +341,7 @@ function attachClickEvent(node, tree, painter) {
             alert('not found!')
         }
     });
+    return true;
 }
 
 /**
@@ -324,12 +349,12 @@ function attachClickEvent(node, tree, painter) {
  *  x/y : left/top point of the picture
  */
  function drawChildren(painter, tree, x, y) {
-    if (typeof(tree) == 'string'){
-        var obj_token = painter.drawText(tree, x, y);
-        var token_rect = getTextBoundingBox(obj_token);
+    if (typeof(tree) == 'object' && !tree.hasOwnProperty('children') ) {
+        var color = (tree.hasOwnProperty('color'))? tree.color : null;
+        var token = painter.drawText(tree.label, x, y, color);
         //painter.drawPoint(x, y)
         //painter.drawBox(x, y, token_rect.width, token_rect.height)
-        return { obj: obj_token, obj_children:[], lines:[], rect: token_rect, fold:false }
+        return { obj: token.obj, obj_children:[], lines:[], rect: token.box, fold:false }
     }
     var width = 0
     var height = 0
@@ -338,7 +363,7 @@ function attachClickEvent(node, tree, painter) {
     for (var i = 0; i < tree.children.length; i++) {
         var child = drawChildren(painter, tree.children[i], x+width, y+TREE_LAYER_HEIGHT)
         //painter.drawPoint(x+width, y+TREE_LAYER_HEIGHT)
-        //painter.drawBox(child_rect.left, child_rect.top, child_rect.width, child_rect.height)
+        //painter.drawBox(child.rect.left, child.rect.top, child.rect.width, child.rect.height)
         width += child.rect.width + TREE_LEAF_GAP
         if (child.rect.height > height){
             height = child.rect.height
@@ -354,17 +379,17 @@ function attachClickEvent(node, tree, painter) {
     //painter.drawBox(tree_rect.left, tree_rect.top, tree_rect.width, tree_rect.height);
     var point0 = getTextMiddel(tree_rect, true); //{x:tree_rect.left+tree_rect.width/2+2, y:tree_rect.top}
     var label_box0 = computeTextBox(tree.label, 0, 0);  //标签文字宽度
-    var obj_label = painter.drawText(tree.label, point0.x-label_box0.width/2, point0.y);    //标签左上点
-    var label_box = getTextBoundingBox(obj_label);
+    var color = (tree.hasOwnProperty('color'))? tree.color : null;
+    var label = painter.drawText(tree.label, point0.x-label_box0.width/2, point0.y, color);    //标签左上点
     //painter.drawPoint(point0.x, point0.y)
-    //painter.drawBox(label_box.left, label_box.top, label_box.width, label_box.height);
+    //painter.drawBox(label.box.left, label.box.top, label.box.width, label.box.height);
     var lines = []
     for (var i = 0; i < points.length; i++) {
         var line = painter.drawLine(point0.x, point0.y+label_box0.height, points[i].x, points[i].y)
         lines.push(line)
     }
     var fold = (tree.hasOwnProperty('fold') && tree.fold)
-    return { obj: obj_label, obj_children: obj_children, lines: lines, rect: tree_rect, fold:fold }
+    return { obj: label.obj, obj_children: obj_children, lines: lines, rect: tree_rect, fold:fold }
 }
 
 /**
@@ -383,7 +408,7 @@ function changeFold(node, painter) {
         var leafs = []
         var collectLeaf_ = defaultArguments(collectLeaf, {leafs:leafs});
         travelChild(node, collectLeaf_)
-        var y = node.rect.top+TREE_LAYER_HEIGHT+FONT_STYLE.leading
+        var y = node.rect.top+TREE_LAYER_HEIGHT
         for (var i=0; i<leafs.length; i++){
             leafs[i].obj.position.y = y;
         }
@@ -417,7 +442,7 @@ function changeFold(node, painter) {
         var collectLeaf_ = defaultArguments(collectLeaf, {leafs:leafs});
         travelChild(node, collectLeaf_)
         for (var i=0; i<leafs.length; i++){
-            leafs[i].obj.position.y = leafs[i].rect.bottom;
+            leafs[i].obj.position.y = leafs[i].rect.top;
         }
         //移位边界分支
         node.lines[0].visible = true
