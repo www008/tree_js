@@ -8,6 +8,7 @@
 * 可交互式折叠/展开子树，也支持初始折叠子树
 * json格式数据接口
 * 仅依赖two.js和jQuery(只使用了$.parseJSON()方法，可用其它json解析方法替换)
+* 增加节点背景着色
 
 ```javascript
 //可按需设置字体、大小、行高等。若采用默认，则这三个变量可不设置
@@ -21,9 +22,9 @@ var FONT_STYLE = {
 var TREE_LAYER_HEIGHT = 40  // the height of tree layer by layer
 var TREE_LEAF_GAP = 15      // the gap between a leaf to another
 
-var tree_json = '{"label":"IP", "children":[{"label":"NP", "children":["去年/NT", {"label":"C", "children":["初/LC","一/LC"] }] },{"label":"NP-SBJ", "children":["/*pro*"] },"。/PU"] }';
+var tree_json = '{"label":"IP", "children":[{"label":"NP", "color":"#FF80ff", "children":[{"label":"去年/NT", "color":"#FF8000"}, {"label":"C", "children":[{"label":"初/LC"}, {"label":"一/LC"}] }] },{"label":"NP-SBJ", "children":[{"label":"/*pro*"}] }, {"label":"。/PU"}] }'
 drawTree('l0',tree_json);   // l0 为加入的document Element对象id。例如 <li id='l0'></li>
-var tree_json = '{"label":"IP", "children":[{"label":"NP", "fold":"true", "children":["去年/NT", {"label":"C", "children":["初/LC","一/LC"] }] },{"label":"NP-SBJ", "children":["/*pro*"] },"。/PU"] }';    //注意：fold==true 初始为折叠子树状态
+var tree_json = '{"label":"IP", "children":[{"label":"NP", "color":"#FF80ff", "fold":"true", "children":[{"label":"去年/NT", "color":"#FF8000"}, {"label":"C", "children":[{"label":"初/LC"}, {"label":"一/LC"}] }] },{"label":"NP-SBJ", "children":[{"label":"/*pro*"}] }, {"label":"。/PU"}] }';    //注意：fold==true 初始为折叠子树状态
 drawTree('l1',tree_json);
 ```
 
